@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Public Transport Routes</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<style>
+	.maps-container {
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.map-wrapper {
+		flex: 1;
+		margin: 10px;
+	}
+
+	.map-container {
+		height: 300px;
+		width: 100%;
+		border-radius: 0.25rem;
+	}
+
+	.info {
+		text-align: center;
+		margin-top: 10px;
+	}
+
+	.card-title-icon {
+		display: inline-block;
+		margin-right: 10px;
+		font-size: 24px;
+	}
+	.pac-container {
+		z-index: 10000; /* This value should be more than the z-index of other elements on your page */
+	}
+
+</style>
+	<!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh_hWU9TOTNOsdD0xN9iOARnHQQhA8WTM"></script> -->
+	
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh_hWU9TOTNOsdD0xN9iOARnHQQhA8WTM&libraries=places"></script>
+</head>
+
+<body>
+
+<div class="container my-4">
+	<div class="mb-4">
+		<label for="centralLocation">Enter Central Location:</label>
+		<input type="text" id="centralLocation" class="form-control" placeholder="e.g., San Francisco" value="37.62639101880548, 126.82894458123164">
+		<button onclick="initMap()" class="btn btn-primary mt-2">Update Maps</button>
+	</div>
+
+	<div class="maps-container">
+
+		<!-- Map Wrapper for Hotel 1 -->
+		<div class="map-wrapper card">
+			<!-- <div class="card-header">
+				<span class="card-title-icon"><i class="fas fa-map-marker-alt"></i></span>
+				Hotel California
+			</div> -->
+			<input type="text" class="form-control mb-2" placeholder="Enter hotel location" id="hotelLocation1" value="Four Seasons Seoul">
+			<button class="btn btn-sm btn-secondary mb-2" onclick="updateHotelLocation('hotelLocation1', 'hotel1', 'info1')">Update Location</button>
+
+			<div id="hotel1" class="map-container card-body"></div>
+			<div id="info1" class="info card-footer"></div>
+		</div>
+		
+		<!-- Map Wrapper for Hotel 2 -->
+		<div class="map-wrapper card">
+			<!-- <div class="card-header">
+				<span class="card-title-icon"><i class="fas fa-map-marker-alt"></i></span>
+				The Ritz-Carlton, San Francisco
+			</div> -->
+			<input type="text" class="form-control mb-2" placeholder="Enter hotel location" id="hotelLocation2" value="Park Hyatt Seoul">
+			<button class="btn btn-sm btn-secondary mb-2" onclick="updateHotelLocation('hotelLocation2', 'hotel2', 'info2')">Update Location</button>
+
+			<div id="hotel2" class="map-container card-body"></div>
+			<div id="info2" class="info card-footer"></div>
+		</div>
+		
+		<!-- Map Wrapper for Hotel 3 -->
+		<div class="map-wrapper card">
+			<!-- <div class="card-header">
+				<span class="card-title-icon"><i class="fas fa-map-marker-alt"></i></span>
+				The Fairmont San Francisco
+			</div> -->
+			<input type="text" class="form-control mb-2" placeholder="Enter hotel location" id="hotelLocation3" value="Conrad Seoul">
+			<button class="btn btn-sm btn-secondary mb-2" onclick="updateHotelLocation('hotelLocation3', 'hotel3', 'info3')">Update Location</button>
+
+			<div id="hotel3" class="map-container card-body"></div>
+			<div id="info3" class="info card-footer"></div>
+		</div>
+
+
+	</div>
+</div>
+<script src="https://kit.fontawesome.com/a076d05399.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+	<script>
+		function updateHotelLocation(inputId, mapId, infoDivId) {
+			var geocoder = new google.maps.Geocoder();
+			var location = document.getElementById(inputId).value;
+			var centralLocation = document.getElementById('centralLocation').value;
+		
+			geocoder.geocode({ 'address': location }, function (results, status) {
+				if (status === google.maps.GeocoderStatus.OK) {
+					var hotelLat = results[0].geometry.location.lat();
+					var hotelLng = results[0].geometry.location.lng();
+		
+					var map = new google.maps.Map(document.getElementById(mapId), {
+						center: {
+							lat: hotelLat,
+							lng: hotelLng
+						},
+						zoom: 12
+					});
+		
+					var marker = new google.maps.Marker({
+						position: {
+							lat: hotelLat,
+							lng: hotelLng
+						},
+						title: location
+					});
+					marker.setMap(map);
+		
+					geocoder.geocode({ 'address': centralLocation }, function (results, status) {
+						if (status === google.maps.GeocoderStatus.OK) {
+							var centralLat = results[0].geometry.location.lat();
+							var centralLng = results[0].geometry.location.lng();
+		
+							var directionsService = new google.maps.DirectionsService();
+							var directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+		
+							var request = {
+								origin: { lat: hotelLat, lng: hotelLng },
+								destination: { lat: centralLat, lng: centralLng },
+								travelMode: google.maps.TravelMode.TRANSIT
+							};
+		
+							directionsService.route(request, function(response, status) {
+								if (status == google.maps.DirectionsStatus.OK) {
+									directionsRenderer.setDirections(response);
+									var route = response.routes[0];
+		
+									var durations = {};
+		
+									for (var j = 0; j < route.legs[0].steps.length; j++) {
+										var step = route.legs[0].steps[j];
+										var mode = step.travel_mode;
+										
+										if (!durations[mode]) {
+											durations[mode] = 0;
+										}
+		
+										durations[mode] += step.duration.value;
+									}
+		
+									var durationListItems = Object.keys(durations).map(function(mode) {
+										return `
+											<li class="list-group-item d-flex justify-content-between align-items-center">
+												${mode}
+												<span class="badge badge-primary badge-pill">${Math.floor(durations[mode] / 60)} mins</span>
+											</li>`;
+									}).join("");
+									
+									var infoContent = `
+										<p><strong>Total travel time from ${location} to central location:</strong> ${route.legs[0].duration.text}</p>
+										<ul class="list-group mt-2">${durationListItems}</ul>
+									`;
+									
+									document.getElementById(infoDivId).innerHTML = infoContent;
+
+								}
+							});
+						}
+					});
+				} else {
+					alert('Geocode was not successful for the following reason: ' + status);
+				}
+			});
+		}
+	
+		function initializeAutocomplete(inputId) {
+			var input = document.getElementById(inputId);
+		
+			// Define bounds for Seoul
+			var seoulBounds = new google.maps.LatLngBounds(
+				new google.maps.LatLng(37.426300, 126.764582),
+				new google.maps.LatLng(37.701749, 127.183594)
+			);
+		
+			var options = {
+				types: ['establishment'], // This restricts the autocomplete result to only businesses
+				bounds: seoulBounds,      // This gives preference to places within the bounds.
+				componentRestrictions: {country: 'KR'}  // This restricts the results to places in Korea.
+			};
+		
+			var autocomplete = new google.maps.places.Autocomplete(input, options);
+		}
+
+	
+		function initMap() {
+			var geocoder = new google.maps.Geocoder();
+			var centralLocation = document.getElementById('centralLocation').value;
+		
+			geocoder.geocode({ 'address': centralLocation }, function (results, status) {
+				if (status === google.maps.GeocoderStatus.OK) {
+					var destination = {
+						lat: results[0].geometry.location.lat(),
+						lng: results[0].geometry.location.lng()
+					};
+		
+					var hotels = [{
+						name: "Four Seasons Hotel Seoul",
+						lat: 37.5606,
+						lng: 126.9802,
+						mapDiv: "hotel1",
+						infoDiv: "info1"
+					},
+					{
+						name: "Park Hyatt Seoul",
+						lat: 37.5212,
+						lng: 127.0305,
+						mapDiv: "hotel2",
+						infoDiv: "info2"
+					},
+					{
+						name: "Conrad Seoul",
+						lat: 37.5507,
+						lng: 127.0129,
+						mapDiv: "hotel3",
+						infoDiv: "info3"
+					}];
+		
+					for (var i = 0; i < hotels.length; i++) {
+						(function(hotel) {
+							var map = new google.maps.Map(document.getElementById(hotel.mapDiv), {
+								center: destination,
+								zoom: 12
+							});
+		
+							var marker = new google.maps.Marker({
+								position: { lat: hotel.lat, lng: hotel.lng },
+								title: hotel.name
+							});
+							marker.setMap(map);
+		
+							var directionsService = new google.maps.DirectionsService();
+							var directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+		
+							var request = {
+								origin: { lat: hotel.lat, lng: hotel.lng },
+								destination: destination,
+								travelMode: google.maps.TravelMode.TRANSIT
+							};
+		
+							directionsService.route(request, function(response, status) {
+								if (status == google.maps.DirectionsStatus.OK) {
+									directionsRenderer.setDirections(response);
+									var route = response.routes[0];
+							
+									var durations = {};
+							
+									for (var j = 0; j < route.legs[0].steps.length; j++) {
+										var step = route.legs[0].steps[j];
+										var mode = step.travel_mode;
+							
+										if (!durations[mode]) {
+											durations[mode] = 0;
+										}
+							
+										durations[mode] += step.duration.value;
+									}
+							
+									var durationListItems = Object.keys(durations).map(function(mode) {
+										return `
+											<li class="list-group-item d-flex justify-content-between align-items-center">
+												${mode}
+												<span class="badge badge-primary badge-pill">${Math.floor(durations[mode] / 60)} mins</span>
+											</li>`;
+									}).join("");
+							
+									var infoContent = `
+										<p><strong>Total travel time from ${hotel.name} to central location:</strong> ${route.legs[0].duration.text}</p>
+										<ul class="list-group mt-2">${durationListItems}</ul>
+									`;
+							
+									document.getElementById(hotel.infoDiv).innerHTML = infoContent;
+								}
+							});
+
+						})(hotels[i]);
+					}
+				} else {
+					alert('Geocode was not successful for the following reason: ' + status);
+				}
+			});
+		}
+	
+		// Initialize autocomplete for each hotel and central location on window load
+		google.maps.event.addDomListener(window, 'load', function() {
+			initializeAutocomplete('hotelLocation1');
+			initializeAutocomplete('hotelLocation2');
+			initializeAutocomplete('hotelLocation3');
+			initializeAutocomplete('centralLocation');
+			initMap(); // Initialize the map on window load as well
+		});
+	</script>
+
+</body>
+
+</html>
